@@ -1,16 +1,38 @@
 package org.cryptokit.core;
 
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
+import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 
 public class Crypto {
 
+    public static byte[] aesEncrypt(final SecretKey secretKey, final byte[] iv, final String plaintext)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        Cipher aesCipher = Cipher.getInstance(CryptoConstants.AES_CIPHER_ALGORITHM);
+        aesCipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
+        final byte[] cipherBytes = aesCipher.doFinal(StringUtils.getStringBytes(plaintext));
+
+        return cipherBytes;
+    }
+
+    public static byte[] aesDecrypt(final SecretKey secretKey, final byte[] iv, byte[] cipherBytes)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        Cipher aesCipher = Cipher.getInstance(CryptoConstants.AES_CIPHER_ALGORITHM);
+        aesCipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(iv));
+        final byte[] decryptedBytes = aesCipher.doFinal(cipherBytes);
+
+        return decryptedBytes;
+    }
+
     /**
-     * Password-Based Key Derivation Function 2 (PBKDF2) implementation
+     * Password-based key derivation function (PBKDF2) implementation
      * <p/>
      * You should be using the high-level PasswordHasher class to hash
      * passwords for storage.
@@ -34,14 +56,14 @@ public class Crypto {
     }
 
     /**
-     * Generates a secure random salt of desired size
+     * Generate secure random bytes
      *
-     * @param saltByteSize Size of the salt to generate, in bytes
-     * @return Secure random bytes suitable for use as salt
+     * @param numBytes Number of random bytes to generate
+     * @return Random bytes suitable for example as salt or initialization vector
      */
-    public static byte[] generateSalt(final int saltByteSize) {
+    public static byte[] generateRandomBytes(final int numBytes) {
         final SecureRandom random = new SecureRandom();
-        final byte[] saltBytes = new byte[saltByteSize];
+        final byte[] saltBytes = new byte[numBytes];
         random.nextBytes(saltBytes);
 
         return saltBytes;

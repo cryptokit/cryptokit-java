@@ -2,8 +2,8 @@ package org.cryptokit.password;
 
 import org.apache.commons.codec.binary.Base64;
 import org.cryptokit.core.CryptoConstants;
-import org.cryptokit.exception.EncodingException;
-import org.cryptokit.exception.InputException;
+import org.cryptokit.exception.InvalidEncodingException;
+import org.cryptokit.exception.InvalidInputException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,12 +34,12 @@ public class PasswordHasherTest {
 
     @Test
     public void testIterations() {
-        assertEquals(hasher.getIterations(), PasswordConstants.PASSWORD_HASH_DEFAULT_ITERATIONS);
+        assertEquals(hasher.getIterations(), PasswordTokenSpec.PASSWORD_HASH_DEFAULT_ITERATIONS);
         hasher.setIterations(10000);
         assertEquals(hasher.getIterations(), 10000);
     }
 
-    @Test(expected = InputException.class)
+    @Test(expected = InvalidInputException.class)
     public void testZeroIterations() {
         hasher.setIterations(0);
     }
@@ -52,14 +52,14 @@ public class PasswordHasherTest {
         validateHashFormat(hashedPassword);
     }
 
-    @Test(expected = InputException.class)
+    @Test(expected = InvalidInputException.class)
     public void testHashEmpty() {
         String hashedPassword = hasher.hash(" ");
 
         validateHashFormat(hashedPassword);
     }
 
-    @Test(expected = InputException.class)
+    @Test(expected = InvalidInputException.class)
     public void testHashNull() {
         hasher.hash(null);
     }
@@ -93,29 +93,34 @@ public class PasswordHasherTest {
         assertFalse(hasher.isValidPassword("wrongPassword", hashedPassword));
     }
 
-    @Test(expected = InputException.class)
+    @Test(expected = InvalidInputException.class)
     public void testIsValidPasswordEmptyPassword() {
         String hashedPassword = hasher.hash("password");
 
         hasher.isValidPassword(" ", hashedPassword);
     }
 
-    @Test(expected = InputException.class)
+    @Test(expected = InvalidInputException.class)
     public void testIsValidPasswordEmptyHash() {
         hasher.isValidPassword("password", " ");
     }
 
 
-    @Test(expected = InputException.class)
+    @Test(expected = InvalidInputException.class)
     public void testIsValidPasswordNullPassword() {
         String hashedPassword = hasher.hash("password");
 
         hasher.isValidPassword(null, hashedPassword);
     }
 
-    @Test(expected = InputException.class)
+    @Test(expected = InvalidInputException.class)
     public void testIsValidPasswordNullHash() {
         hasher.isValidPassword("password", null);
+    }
+
+    @Test(expected = InvalidEncodingException.class)
+    public void testIsValidPasswordGarbage() {
+        hasher.isValidPassword("password", "xxyyzz");
     }
 
     @Test
@@ -128,18 +133,18 @@ public class PasswordHasherTest {
     @Test
     public void testIsValidPasswordKnownGoodV1Hash() {
         // This will detect if the token format itself is changed in some incompatible way by mistake
-        assertTrue(hasher.isValidPassword("password", "ckp1.5000.YBqOl-Kp-Laqs9NbMGLiYfnsUkrFv5J0Z8M70WumzIA.vlSKFVVPmq_QkgS-NtOOQmc5drzqTDuUCdXqo77jyYg"));
+        assertTrue(hasher.isValidPassword("password", "ck_p1.5000.YBqOl-Kp-Laqs9NbMGLiYfnsUkrFv5J0Z8M70WumzIA.vlSKFVVPmq_QkgS-NtOOQmc5drzqTDuUCdXqo77jyYg"));
     }
 
-    @Test(expected = EncodingException.class)
-    public void testIsValidPasswordUnknownVersionHash() {
-        String invalidHashedPassword = hasher.hash("password").replace(PasswordConstants.PASSWORD_TOKEN_HEADER, "ckpX");
+    @Test(expected = InvalidEncodingException.class)
+    public void testIsValidPasswordUnknownTokenVersion() {
+        String invalidHashedPassword = hasher.hash("password").replace(PasswordTokenSpec.PASSWORD_TOKEN_HEADER, "ck_pX");
 
         hasher.isValidPassword("password", invalidHashedPassword);
     }
 
-    @Test(expected = EncodingException.class)
-    public void testIsValidPasswordUnknownSegmentHash() {
+    @Test(expected = InvalidEncodingException.class)
+    public void testIsValidPasswordUnknownTokenSegment() {
         String invalidHashedPassword = hasher.hash("password") + CryptoConstants.SEGMENT_DELIMITER + "extraBit";
 
         hasher.isValidPassword("password", invalidHashedPassword);
@@ -147,9 +152,9 @@ public class PasswordHasherTest {
 
     private void validateHashFormat(String hashedPassword) {
         String[] segments = hashedPassword.split(CryptoConstants.SEGMENT_DELIMITER_PATTERN);
-        assertEquals(segments.length, PasswordConstants.PASSWORD_NUM_SEGMENTS);
-        assertEquals(segments[PasswordConstants.PASSWORD_SEGMENT_HEADER], PasswordConstants.PASSWORD_TOKEN_HEADER);
-        assertTrue(Base64.isBase64(segments[PasswordConstants.PASSWORD_SEGMENT_SALT]));
-        assertTrue(Base64.isBase64(segments[PasswordConstants.PASSWORD_SEGMENT_HASH]));
+        assertEquals(segments.length, PasswordTokenSpec.PASSWORD_NUM_SEGMENTS);
+        assertEquals(segments[PasswordTokenSpec.PASSWORD_SEGMENT_HEADER], PasswordTokenSpec.PASSWORD_TOKEN_HEADER);
+        assertTrue(Base64.isBase64(segments[PasswordTokenSpec.PASSWORD_SEGMENT_SALT]));
+        assertTrue(Base64.isBase64(segments[PasswordTokenSpec.PASSWORD_SEGMENT_HASH]));
     }
 }

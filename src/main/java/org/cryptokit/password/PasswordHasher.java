@@ -3,16 +3,16 @@ package org.cryptokit.password;
 import org.cryptokit.core.Crypto;
 import org.cryptokit.core.CryptoConstants;
 import org.cryptokit.core.StringUtils;
-import org.cryptokit.exception.EncodingException;
-import org.cryptokit.exception.InputException;
+import org.cryptokit.exception.InvalidEncodingException;
+import org.cryptokit.exception.InvalidInputException;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
-import static org.cryptokit.password.PasswordConstants.*;
+import static org.cryptokit.password.PasswordTokenSpec.*;
 
 public class PasswordHasher {
-    private int mIterations = PasswordConstants.PASSWORD_HASH_DEFAULT_ITERATIONS;
+    private int mIterations = PasswordTokenSpec.PASSWORD_HASH_DEFAULT_ITERATIONS;
 
     /**
      * Set the number of iterations to use when hashing the password.
@@ -27,7 +27,7 @@ public class PasswordHasher {
      */
     public void setIterations(final int iterations) {
         if (iterations < 1)
-            throw new InputException("Iterations must be 1 or greater");
+            throw new InvalidInputException("Iterations must be 1 or greater");
 
         mIterations = iterations;
     }
@@ -56,9 +56,9 @@ public class PasswordHasher {
      */
     public String hash(final String password) {
         if (StringUtils.isNullOrEmpty(password))
-            throw new InputException("Password cannot be null or empty");
+            throw new InvalidInputException("Password cannot be null or empty");
 
-        final byte[] saltBytes = Crypto.generateSalt(PASSWORD_SALT_BYTE_SIZE);
+        final byte[] saltBytes = Crypto.generateRandomBytes(PASSWORD_SALT_BYTE_SIZE);
         final byte[] passwordHashBytes = hashPasswordUsingSalt(saltBytes, password, mIterations);
         final String passwordHashToken = encodePasswordHashToken(saltBytes, passwordHashBytes, mIterations);
 
@@ -77,9 +77,9 @@ public class PasswordHasher {
      */
     public boolean isValidPassword(final String password, final String passwordHashToken) {
         if (StringUtils.isNullOrEmpty(password))
-            throw new InputException("Password cannot be null or empty");
+            throw new InvalidInputException("Password cannot be null or empty");
         if (StringUtils.isNullOrEmpty(passwordHashToken))
-            throw new InputException("Password hash token cannot be null or empty");
+            throw new InvalidInputException("Password hash token cannot be null or empty");
 
         final String[] segments = decodePasswordHashToken(passwordHashToken);
         final int iterationsUsed = Integer.parseInt(segments[PASSWORD_SEGMENT_ITERATIONS]);
@@ -100,9 +100,9 @@ public class PasswordHasher {
         try {
             passwordHashBytes = Crypto.pbkdf2(password, saltBytes, iterations, PASSWORD_HASH_BYTE_SIZE);
         } catch (NoSuchAlgorithmException e) {
-            throw new EncodingException("You must use a Java crypto provider that implements " + CryptoConstants.PBKDF2_HASH_ALGORITHM, e);
+            throw new InvalidEncodingException("You must use a Java crypto provider that implements " + CryptoConstants.PBKDF2_HASH_ALGORITHM, e);
         } catch (InvalidKeySpecException e) {
-            throw new EncodingException("Internal library error", e);
+            throw new InvalidEncodingException("Internal library error", e);
         }
 
         return passwordHashBytes;
@@ -126,10 +126,10 @@ public class PasswordHasher {
         final String[] segments = passwordHashToken.split(CryptoConstants.SEGMENT_DELIMITER_PATTERN);
 
         if (segments.length != PASSWORD_NUM_SEGMENTS)
-            throw new EncodingException(String.format("Password hash is not in the expected format. Expected %d segments but found %d",
+            throw new InvalidEncodingException(String.format("Password hash is not in the expected format. Expected %d segments but found %d",
                     PASSWORD_NUM_SEGMENTS, segments.length));
         if (!PASSWORD_TOKEN_HEADER.equals(segments[PASSWORD_SEGMENT_HEADER]))
-            throw new EncodingException(String.format("Password hash is not in the expected format. Expected '%s' header but found '%s'",
+            throw new InvalidEncodingException(String.format("Password hash is not in the expected format. Expected '%s' header but found '%s'",
                     PASSWORD_TOKEN_HEADER, segments[PASSWORD_SEGMENT_HEADER]));
 
         return segments;
